@@ -33,7 +33,7 @@ class TemplateService
     }
 
     public function renderAssociation(
-        array $associationMapping,
+        array|AssociationMapping $associationMapping,
         string $entityDql,
         ClassMetadata $targetEntityMetadata,
         string $entityDqlTargeted,
@@ -46,13 +46,21 @@ class TemplateService
             $idType = $idField['type'];
         }
 
-        $fieldName = $associationMapping['fieldName'];
+        $fieldName = $targetEntity = null;
+        if (\is_array($associationMapping)) {
+            $fieldName = $associationMapping['fieldName'];
+            $targetEntity = $associationMapping['targetEntity'];
+        } else {
+            $fieldName = $associationMapping->fieldName;
+            $targetEntity = $associationMapping->targetEntity;
+        }
+
         $parameters = array(
             'entityDql' => $entityDql,
             'column' => ucfirst($fieldName),
             'columnDql' => $fieldName,
             'idType' => $idType,
-            'targetEntity' => $associationMapping['targetEntity'],
+            'targetEntity' => $targetEntity,
             'entityDqlTargeted' => $entityDqlTargeted,
             'entityClasspath' => $entityClasspath,
         );
