@@ -171,6 +171,18 @@ class MyClassRepositoryBase extends \Doctrine\Bundle\DoctrineBundle\Repository\S
         return $entity;
     }
 
+    public function hasMoreThanNItems(string $columnName, $value, int $n): bool
+    {
+        return $this->createQueryBuilder('e')
+            ->select('1')
+            ->where('e.' . $columnName . ' = :columnValue')
+            ->setFirstResult($n + 1)
+            ->setMaxResults(1)
+            ->getQuery()
+            ->setParameter('columnValue', $value)
+            ->getOneOrNullResult() !== null;
+    }
+
     public static function filterById(QueryBuilder $qb, $value, $operator = Comparison::EQ, $entityName = 'myClass', $columnName = 'id'): QueryBuilder
     {
         if ($value === null) {
@@ -222,6 +234,9 @@ class MyClassRepositoryBase extends \Doctrine\Bundle\DoctrineBundle\Repository\S
         return $qb;
     }
 
+    /**
+     * @return \Okwind\QueryBuilderRepositoryGeneratorBundle\Tests\Entity\MyClass[]
+     */
     public function findById(mixed $value): array
     {
         $qb = $this->getNewQueryBuilder();
@@ -306,6 +321,9 @@ class MyClassRepositoryBase extends \Doctrine\Bundle\DoctrineBundle\Repository\S
         return $qb;
     }
 
+    /**
+     * @return \Okwind\QueryBuilderRepositoryGeneratorBundle\Tests\Entity\MyClass[]
+     */
     public function findByNumber(mixed $value): array
     {
         $qb = $this->getNewQueryBuilder();
@@ -390,6 +408,9 @@ class MyClassRepositoryBase extends \Doctrine\Bundle\DoctrineBundle\Repository\S
         return $qb;
     }
 
+    /**
+     * @return \Okwind\QueryBuilderRepositoryGeneratorBundle\Tests\Entity\MyClass[]
+     */
     public function findByName(mixed $value): array
     {
         $qb = $this->getNewQueryBuilder();
@@ -526,6 +547,9 @@ class MyClassRepositoryBase extends \Doctrine\Bundle\DoctrineBundle\Repository\S
         return $qb;
     }
 
+    /**
+     * @return \Okwind\QueryBuilderRepositoryGeneratorBundle\Tests\Entity\MyClass[]
+     */
     public function findByForeignClasses(mixed $value): array
     {
         $qb = $this->getNewQueryBuilder();
