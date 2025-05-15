@@ -175,3 +175,15 @@ class {{ entityClassname }}Base extends {{ extendClass }}
 
         return $entity;
     }
+
+    public function hasMoreThanNItems(string $columnName, $value, int $n): bool
+    {
+        return $this->createQueryBuilder('e')
+            ->select('1')
+            ->where('e.' . $columnName . ' = :columnValue')
+            ->setFirstResult($n + 1)
+            ->setMaxResults(1)
+            ->getQuery()
+            ->setParameter('columnValue', $value)
+            ->getOneOrNullResult() !== null;
+    }
