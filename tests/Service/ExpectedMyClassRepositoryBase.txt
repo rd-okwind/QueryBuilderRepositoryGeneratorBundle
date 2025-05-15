@@ -176,7 +176,7 @@ class MyClassRepositoryBase extends \Doctrine\Bundle\DoctrineBundle\Repository\S
         return $this->createQueryBuilder('e')
             ->select('1')
             ->where('e.' . $columnName . ' = :columnValue')
-            ->setFirstResult($n + 1)
+            ->setFirstResult($n)
             ->setMaxResults(1)
             ->getQuery()
             ->setParameter('columnValue', $value)
