@@ -17,6 +17,9 @@ use Symfony\Component\Uid\Uuid;
 /**
  * Generated class for filter query builders
  *
+ * @template T of \Okwind\QueryBuilderRepositoryGeneratorBundle\Tests\Entity\MyClass = \Okwind\QueryBuilderRepositoryGeneratorBundle\Tests\Entity\MyClass
+ *
+ * @extends \Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository<T>
  */
 class MyClassRepositoryBase extends \Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository
 {
