@@ -11,7 +11,6 @@ use Symfony\Bundle\TwigBundle\TwigBundle;
 use Symfony\Component\HttpKernel\KernelInterface;
 use Okwind\QueryBuilderRepositoryGeneratorBundle\Generator\RepositoryGenerator;
 use Okwind\QueryBuilderRepositoryGeneratorBundle\QueryBuilderRepositoryGeneratorBundle;
-use Okwind\QueryBuilderRepositoryGeneratorBundle\Tests\Entity\MyClass;
 use Okwind\QueryBuilderRepositoryGeneratorBundle\Tests\Entity\MyCompositeClass;
 use Okwind\QueryBuilderRepositoryGeneratorBundle\Tests\Repository\MyCompositeClassRepositoryBase;
 
@@ -73,19 +72,19 @@ class RepositoryGeneratorTest extends KernelTestCase
     }
 
     /**
-     * @return iterable<string, array{list<string>}>
+     * @return iterable<string, array{array<string, mixed>, string}>
      */
     public static function provideIncompleteIdentifiers(): iterable
     {
-        yield 'no identifier field set' => [[]];
-        yield 'one identifier field left out' => [['date']];
+        yield 'no identifier field set' => [[], 'myClass, date'];
+        yield 'one identifier field left out' => [['date' => new \DateTime('2026-01-01')], 'myClass'];
     }
 
     /**
-     * @param list<string> $setFields
+     * @param array<string, mixed> $identifier
      */
     #[DataProvider('provideIncompleteIdentifiers')]
-    public function testExistsIsFalseWhenTheIdentifierIsIncomplete(array $setFields): void
+    public function testExistsThrowsWhenTheIdentifierIsIncomplete(array $identifier, string $missingFields): void
     {
         self::bootKernel();
 
@@ -93,12 +92,31 @@ class RepositoryGeneratorTest extends KernelTestCase
 
         // getIdentifierValues() leaves out the identifier fields without value
         $entity = new MyCompositeClass();
-        $values = ['myClass' => new MyClass(), 'date' => new \DateTime('2026-01-01')];
-        foreach ($setFields as $field) {
-            (new \ReflectionProperty(MyCompositeClass::class, $field))->setValue($entity, $values[$field]);
+        foreach ($identifier as $field => $value) {
+            (new \ReflectionProperty(MyCompositeClass::class, $field))->setValue($entity, $value);
         }
 
-        // answered without a query: the test kernel has no reachable database
-        $this->assertFalse($repository->exists($entity));
+        // thrown before any query: the test kernel has no reachable database
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('The identifier of '.MyCompositeClass::class.' is incomplete, missing: '.$missingFields);
+
+        $repository->exists($entity);
+    }
+
+    /**
+     * @param array<string, mixed> $identifier
+     */
+    #[DataProvider('provideIncompleteIdentifiers')]
+    public function testFindOneThrowsWhenTheIdentifierIsIncomplete(array $identifier, string $missingFields): void
+    {
+        self::bootKernel();
+
+        $repository = new MyCompositeClassRepositoryBase(self::getContainer()->get('doctrine'));
+
+        // thrown before any query: the test kernel has no reachable database
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('The identifier of '.MyCompositeClass::class.' is incomplete, missing: '.$missingFields);
+
+        $repository->findOne($identifier);
     }
 }
