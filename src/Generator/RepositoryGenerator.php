@@ -69,18 +69,12 @@ class RepositoryGenerator
         // the fields findOne() and exists() target, by name, with the suffix of their filterBy method: the
         // "id" field when there is one, even when it is not the Doctrine identifier (a uuid next to a
         // composite primary key), otherwise the identifier fields, which can be named otherwise or composite
-        $identifiers = ['id' => 'Id'];
-        if (!isset($meta->fieldMappings['id'])) {
-            $identifiers = [];
-            foreach ($meta->getIdentifierFieldNames() as $identifierFieldName) {
-                $identifiers[$identifierFieldName] = ucfirst($identifierFieldName);
-            }
-        }
+        $fields = isset($meta->fieldMappings['id']) ? ['id'] : $meta->getIdentifierFieldNames();
+        $identifiers = array_combine($fields, array_map('ucfirst', $fields));
 
         $idType = null;
-        $identifierFieldName = array_key_first($identifiers);
-        if (1 === \count($identifiers) && isset($meta->fieldMappings[$identifierFieldName])) {
-            $idType = $meta->fieldMappings[$identifierFieldName]['type'];
+        if (1 === \count($fields) && isset($meta->fieldMappings[$fields[0]])) {
+            $idType = $meta->fieldMappings[$fields[0]]['type'];
         }
         $extendClass = $this->configurator->getExtendRepository($entityClasspath);
         $renderedTemplate = $this->templateService->renderTopClass(
