@@ -121,6 +121,11 @@ class MyCompositeClassRepositoryBase extends \Doctrine\Bundle\DoctrineBundle\Rep
         // the identifier values are read from the mapping: there is no "id" field, and the getters
         // may not follow the field names
         $identifier = $this->getClassMetadata()->getIdentifierValues($entity);
+        // a field of the key without value (null or not initialized) is left out: such an entity cannot be
+        // in the database, the columns of a primary key not being nullable
+        if (\count($identifier) < 2) {
+            return false;
+        }
         static::filterByMyClass($qb, $identifier['myClass']);
         static::filterByDate($qb, $identifier['date']);
 
@@ -162,8 +167,9 @@ class MyCompositeClassRepositoryBase extends \Doctrine\Bundle\DoctrineBundle\Rep
     public function findOne($id): \Okwind\QueryBuilderRepositoryGeneratorBundle\Tests\Entity\MyCompositeClass
     {
         $qb = $this->getNewQueryBuilder();
-        static::filterByMyClass($qb, $id['myClass']);
-        static::filterByDate($qb, $id['date']);
+        // a field left out is searched as null and matches no row, as a null id does
+        static::filterByMyClass($qb, $id['myClass'] ?? null);
+        static::filterByDate($qb, $id['date'] ?? null);
 
         try {
             $entity = static::getQueryBuilderSingleResult($qb);

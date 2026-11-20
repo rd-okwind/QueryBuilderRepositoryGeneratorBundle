@@ -121,6 +121,11 @@ class MyCodeClassRepositoryBase extends \Doctrine\Bundle\DoctrineBundle\Reposito
         // the identifier values are read from the mapping: there is no "id" field, and the getters
         // may not follow the field names
         $identifier = $this->getClassMetadata()->getIdentifierValues($entity);
+        // a field of the key without value (null or not initialized) is left out: such an entity cannot be
+        // in the database, the columns of a primary key not being nullable
+        if (\count($identifier) < 1) {
+            return false;
+        }
         static::filterByCode($qb, $identifier['code']);
 
         $result = static::getQueryBuilderOneOrNullResult($qb);

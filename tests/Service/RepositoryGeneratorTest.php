@@ -11,6 +11,9 @@ use Symfony\Bundle\TwigBundle\TwigBundle;
 use Symfony\Component\HttpKernel\KernelInterface;
 use Okwind\QueryBuilderRepositoryGeneratorBundle\Generator\RepositoryGenerator;
 use Okwind\QueryBuilderRepositoryGeneratorBundle\QueryBuilderRepositoryGeneratorBundle;
+use Okwind\QueryBuilderRepositoryGeneratorBundle\Tests\Entity\MyClass;
+use Okwind\QueryBuilderRepositoryGeneratorBundle\Tests\Entity\MyCompositeClass;
+use Okwind\QueryBuilderRepositoryGeneratorBundle\Tests\Repository\MyCompositeClassRepositoryBase;
 
 class RepositoryGeneratorTest extends KernelTestCase
 {
@@ -67,5 +70,35 @@ class RepositoryGeneratorTest extends KernelTestCase
         $expectedContent = \file_get_contents(__DIR__.'/Expected'.$repository.'Base.txt');
 
         $this->assertSame($expectedContent, $content);
+    }
+
+    /**
+     * @return iterable<string, array{list<string>}>
+     */
+    public static function provideIncompleteIdentifiers(): iterable
+    {
+        yield 'no identifier field set' => [[]];
+        yield 'one identifier field left out' => [['date']];
+    }
+
+    /**
+     * @param list<string> $setFields
+     */
+    #[DataProvider('provideIncompleteIdentifiers')]
+    public function testExistsIsFalseWhenTheIdentifierIsIncomplete(array $setFields): void
+    {
+        self::bootKernel();
+
+        $repository = new MyCompositeClassRepositoryBase(self::getContainer()->get('doctrine'));
+
+        // getIdentifierValues() leaves out the identifier fields without value
+        $entity = new MyCompositeClass();
+        $values = ['myClass' => new MyClass(), 'date' => new \DateTime('2026-01-01')];
+        foreach ($setFields as $field) {
+            (new \ReflectionProperty(MyCompositeClass::class, $field))->setValue($entity, $values[$field]);
+        }
+
+        // answered without a query: the test kernel has no reachable database
+        $this->assertFalse($repository->exists($entity));
     }
 }

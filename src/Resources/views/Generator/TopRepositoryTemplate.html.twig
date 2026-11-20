@@ -125,6 +125,11 @@ class {{ entityClassname }}Base extends {{ extendClass }}
         // the identifier values are read from the mapping: there is no "id" field, and the getters
         // may not follow the field names
         $identifier = $this->getClassMetadata()->getIdentifierValues($entity);
+        // a field of the key without value (null or not initialized) is left out: such an entity cannot be
+        // in the database, the columns of a primary key not being nullable
+        if (\count($identifier) < {{ identifiers|length }}) {
+            return false;
+        }
 {% for field, column in identifiers %}
         static::filterBy{{ column }}($qb, $identifier['{{ field }}']);
 {% endfor %}
@@ -195,8 +200,9 @@ class {{ entityClassname }}Base extends {{ extendClass }}
     public function findOne($id): \{{ entityClasspath }}
     {
         $qb = $this->getNewQueryBuilder();
+        // a field left out is searched as null and matches no row, as a null id does
 {% for field, column in identifiers %}
-        static::filterBy{{ column }}($qb, $id['{{ field }}']);
+        static::filterBy{{ column }}($qb, $id['{{ field }}'] ?? null);
 {% endfor %}
 
         try {
