@@ -121,6 +121,8 @@ class MyCodeClassRepositoryBase extends \Doctrine\Bundle\DoctrineBundle\Reposito
         // the identifier values are read from the mapping: there is no "id" field, and the getters
         // may not follow the field names
         $identifier = $this->getClassMetadata()->getIdentifierValues($entity);
+        // a field of the key without value (null or not initialized) is left out of it
+        self::assertCompleteIdentifier($identifier);
         static::filterByCode($qb, $identifier['code']);
 
         $result = static::getQueryBuilderOneOrNullResult($qb);
@@ -174,6 +176,23 @@ class MyCodeClassRepositoryBase extends \Doctrine\Bundle\DoctrineBundle\Reposito
         }
 
         return $entity;
+    }
+
+    /**
+     * A field left out of the identifier is a bug of the caller: the fields of a key other than "id" are
+     * assigned before the entity is persisted (Doctrine generates no composite key).
+     *
+     * @param array<string, mixed> $identifier the values of the identifier, by field
+     *
+     * @throws \InvalidArgumentException when a field of the identifier is left out
+     */
+    private static function assertCompleteIdentifier(array $identifier): void
+    {
+        $missingFields = array_diff(['code'], array_keys($identifier));
+
+        if ([] !== $missingFields) {
+            throw new \InvalidArgumentException(sprintf('The identifier of %s is incomplete, missing: %s', \Okwind\QueryBuilderRepositoryGeneratorBundle\Tests\Entity\MyCodeClass::class, implode(', ', $missingFields)));
+        }
     }
 
     public function hasMoreThanNItems(string $columnName, $value, int $n): bool

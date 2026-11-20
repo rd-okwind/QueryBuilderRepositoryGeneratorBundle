@@ -125,6 +125,8 @@ class {{ entityClassname }}Base extends {{ extendClass }}
         // the identifier values are read from the mapping: there is no "id" field, and the getters
         // may not follow the field names
         $identifier = $this->getClassMetadata()->getIdentifierValues($entity);
+        // a field of the key without value (null or not initialized) is left out of it
+        self::assertCompleteIdentifier($identifier);
 {% for field, column in identifiers %}
         static::filterBy{{ column }}($qb, $identifier['{{ field }}']);
 {% endfor %}
@@ -191,10 +193,15 @@ class {{ entityClassname }}Base extends {{ extendClass }}
 {% else %}
     /**
      * @param array{{ '{' }}{{ identifiers|keys|map(field => field ~ ': mixed')|join(', ') }}} $id the values of the composite identifier, by field
+     *
+     * @throws \InvalidArgumentException when a field of the identifier is left out
      */
     public function findOne($id): \{{ entityClasspath }}
     {
+        self::assertCompleteIdentifier($id);
+
         $qb = $this->getNewQueryBuilder();
+        // a null value matches no row, as a null id does
 {% for field, column in identifiers %}
         static::filterBy{{ column }}($qb, $id['{{ field }}']);
 {% endfor %}
@@ -207,6 +214,25 @@ class {{ entityClassname }}Base extends {{ extendClass }}
         }
 
         return $entity;
+    }
+{% endif %}
+{% if identifiers|keys != ['id'] %}
+
+    /**
+     * A field left out of the identifier is a bug of the caller: the fields of a key other than "id" are
+     * assigned before the entity is persisted (Doctrine generates no composite key).
+     *
+     * @param array<string, mixed> $identifier the values of the identifier, by field
+     *
+     * @throws \InvalidArgumentException when a field of the identifier is left out
+     */
+    private static function assertCompleteIdentifier(array $identifier): void
+    {
+        $missingFields = array_diff([{% for field in identifiers|keys %}'{{ field }}'{% if not loop.last %}, {% endif %}{% endfor %}], array_keys($identifier));
+
+        if ([] !== $missingFields) {
+            throw new \InvalidArgumentException(sprintf('The identifier of %s is incomplete, missing: %s', \{{ entityClasspath }}::class, implode(', ', $missingFields)));
+        }
     }
 {% endif %}
 

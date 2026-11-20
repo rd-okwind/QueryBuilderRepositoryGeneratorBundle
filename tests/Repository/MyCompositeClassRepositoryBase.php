@@ -121,6 +121,8 @@ class MyCompositeClassRepositoryBase extends \Doctrine\Bundle\DoctrineBundle\Rep
         // the identifier values are read from the mapping: there is no "id" field, and the getters
         // may not follow the field names
         $identifier = $this->getClassMetadata()->getIdentifierValues($entity);
+        // a field of the key without value (null or not initialized) is left out of it
+        self::assertCompleteIdentifier($identifier);
         static::filterByMyClass($qb, $identifier['myClass']);
         static::filterByDate($qb, $identifier['date']);
 
@@ -158,10 +160,15 @@ class MyCompositeClassRepositoryBase extends \Doctrine\Bundle\DoctrineBundle\Rep
 
     /**
      * @param array{myClass: mixed, date: mixed} $id the values of the composite identifier, by field
+     *
+     * @throws \InvalidArgumentException when a field of the identifier is left out
      */
     public function findOne($id): \Okwind\QueryBuilderRepositoryGeneratorBundle\Tests\Entity\MyCompositeClass
     {
+        self::assertCompleteIdentifier($id);
+
         $qb = $this->getNewQueryBuilder();
+        // a null value matches no row, as a null id does
         static::filterByMyClass($qb, $id['myClass']);
         static::filterByDate($qb, $id['date']);
 
@@ -173,6 +180,23 @@ class MyCompositeClassRepositoryBase extends \Doctrine\Bundle\DoctrineBundle\Rep
         }
 
         return $entity;
+    }
+
+    /**
+     * A field left out of the identifier is a bug of the caller: the fields of a key other than "id" are
+     * assigned before the entity is persisted (Doctrine generates no composite key).
+     *
+     * @param array<string, mixed> $identifier the values of the identifier, by field
+     *
+     * @throws \InvalidArgumentException when a field of the identifier is left out
+     */
+    private static function assertCompleteIdentifier(array $identifier): void
+    {
+        $missingFields = array_diff(['myClass', 'date'], array_keys($identifier));
+
+        if ([] !== $missingFields) {
+            throw new \InvalidArgumentException(sprintf('The identifier of %s is incomplete, missing: %s', \Okwind\QueryBuilderRepositoryGeneratorBundle\Tests\Entity\MyCompositeClass::class, implode(', ', $missingFields)));
+        }
     }
 
     public function hasMoreThanNItems(string $columnName, $value, int $n): bool
