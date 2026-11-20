@@ -5,6 +5,7 @@ namespace Okwind\QueryBuilderRepositoryGeneratorBundle\Tests\Service;
 use Doctrine\Bundle\DoctrineBundle\DoctrineBundle;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 use Nyholm\BundleTest\TestKernel;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\MakerBundle\MakerBundle;
 use Symfony\Bundle\TwigBundle\TwigBundle;
 use Symfony\Component\HttpKernel\KernelInterface;
@@ -34,7 +35,19 @@ class RepositoryGeneratorTest extends KernelTestCase
         return $kernel;
     }
 
-    public function testGenerateFiles(): void
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function provideRepositories(): iterable
+    {
+        yield 'id identifier' => ['MyClassRepository'];
+        yield 'composite identifier' => ['MyCompositeClassRepository'];
+        yield 'identifier not named id' => ['MyCodeClassRepository'];
+        yield 'id field next to a composite identifier' => ['MyIdFieldClassRepository'];
+    }
+
+    #[DataProvider('provideRepositories')]
+    public function testGenerateFiles(string $repository): void
     {
         self::bootKernel();
 
@@ -46,12 +59,12 @@ class RepositoryGeneratorTest extends KernelTestCase
         $service = $container->get('okwind_qbrg.generator.repository_generator');
         $service->generateFiles();
 
-        $content = \file_get_contents(__DIR__.'/../Repository/MyClassRepositoryBase.php');
+        $content = \file_get_contents(__DIR__.'/../Repository/'.$repository.'Base.php');
 
         // keep for dev update
-        // \file_put_contents(__DIR__.'/ExpectedMyClassRepositoryBase.txt', $content);
+        // \file_put_contents(__DIR__.'/Expected'.$repository.'Base.txt', $content);
 
-        $expectedContent = \file_get_contents(__DIR__.'/ExpectedMyClassRepositoryBase.txt');
+        $expectedContent = \file_get_contents(__DIR__.'/Expected'.$repository.'Base.txt');
 
         $this->assertSame($expectedContent, $content);
     }

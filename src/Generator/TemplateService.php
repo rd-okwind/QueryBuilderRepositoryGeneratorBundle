@@ -17,7 +17,10 @@ class TemplateService
     ) {
     }
 
-    public function renderTopClass(string $extendClass, string $namespace, string $entityClasspath, string $entityClassname, ?string $bundleName, string $entityDql, $idType): string
+    /**
+     * @param array<string, string> $identifiers the identifier fields, with the suffix of their filterBy method
+     */
+    public function renderTopClass(string $extendClass, string $namespace, string $entityClasspath, string $entityClassname, ?string $bundleName, string $entityDql, $idType, array $identifiers = ['id' => 'Id']): string
     {
         $topClassparameter = array(
             'namespace' => $namespace,
@@ -27,6 +30,7 @@ class TemplateService
             'bundleName' => $bundleName,
             'entityDql' => $entityDql,
             'idType' => $idType,
+            'identifiers' => $identifiers,
         );
 
         return $this->twig->render($this->topRepositoryTemple, $topClassparameter);

@@ -66,10 +66,21 @@ class RepositoryGenerator
 
         $entityNamespace = $this->getNamespaceFromFilepath($customRepositoryClassName);
 
+        // the fields findOne() and exists() target, by name, with the suffix of their filterBy method: the
+        // "id" field when there is one, even when it is not the Doctrine identifier (a uuid next to a
+        // composite primary key), otherwise the identifier fields, which can be named otherwise or composite
+        $identifiers = ['id' => 'Id'];
+        if (!isset($meta->fieldMappings['id'])) {
+            $identifiers = [];
+            foreach ($meta->getIdentifierFieldNames() as $identifierFieldName) {
+                $identifiers[$identifierFieldName] = ucfirst($identifierFieldName);
+            }
+        }
+
         $idType = null;
-        if (isset($meta->fieldMappings['id'])) {
-            $idField = $meta->fieldMappings['id'];
-            $idType = $idField['type'];
+        $identifierFieldName = array_key_first($identifiers);
+        if (1 === \count($identifiers) && isset($meta->fieldMappings[$identifierFieldName])) {
+            $idType = $meta->fieldMappings[$identifierFieldName]['type'];
         }
         $extendClass = $this->configurator->getExtendRepository($entityClasspath);
         $renderedTemplate = $this->templateService->renderTopClass(
@@ -80,6 +91,7 @@ class RepositoryGenerator
             $bundleName,
             $entityDql,
             $idType,
+            $identifiers,
         );
 
         //parse the columns

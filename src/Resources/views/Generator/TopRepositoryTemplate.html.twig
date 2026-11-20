@@ -118,8 +118,17 @@ class {{ entityClassname }}Base extends {{ extendClass }}
         $exists = false;
 
         $qb = $this->getNewQueryBuilder();
+{% if identifiers|keys == ['id'] %}
         $entityId = $entity->getId();
         static::filterById($qb, $entityId);
+{% else %}
+        // the identifier values are read from the mapping: there is no "id" field, and the getters
+        // may not follow the field names
+        $identifier = $this->getClassMetadata()->getIdentifierValues($entity);
+{% for field, column in identifiers %}
+        static::filterBy{{ column }}($qb, $identifier['{{ field }}']);
+{% endfor %}
+{% endif %}
 
         $result = static::getQueryBuilderOneOrNullResult($qb);
 
@@ -139,7 +148,7 @@ class {{ entityClassname }}Base extends {{ extendClass }}
         return $qb;
     }
 
-    public static function existsByQueryBuilder(QueryBuilder $qb, $columnName = 'id', $useQueryCache = false): bool
+    public static function existsByQueryBuilder(QueryBuilder $qb, $columnName = '{{ identifiers|keys|first }}', $useQueryCache = false): bool
     {
         $exists = false;
         $qb->select($qb->expr()->count('{{ entityDql }}.'.$columnName));
@@ -153,6 +162,7 @@ class {{ entityClassname }}Base extends {{ extendClass }}
         return $exists;
     }
 
+{% if identifiers|length == 1 %}
     public function findOne($id): \{{ entityClasspath }}
     {
         // try to extract the value from an enum
@@ -168,7 +178,7 @@ class {{ entityClassname }}Base extends {{ extendClass }}
         }
 {% endif %}
         $qb = $this->getNewQueryBuilder();
-        static::filterById($qb, $id);
+        static::filterBy{{ identifiers|first }}($qb, $id);
 
         try {
             $entity = static::getQueryBuilderSingleResult($qb);
@@ -178,6 +188,27 @@ class {{ entityClassname }}Base extends {{ extendClass }}
 
         return $entity;
     }
+{% else %}
+    /**
+     * @param array{{ '{' }}{{ identifiers|keys|map(field => field ~ ': mixed')|join(', ') }}} $id the values of the composite identifier, by field
+     */
+    public function findOne($id): \{{ entityClasspath }}
+    {
+        $qb = $this->getNewQueryBuilder();
+{% for field, column in identifiers %}
+        static::filterBy{{ column }}($qb, $id['{{ field }}']);
+{% endfor %}
+
+        try {
+            $entity = static::getQueryBuilderSingleResult($qb);
+        } catch (EntityNotFoundException|NoResultException $ex) {
+            // no identifier in the message: its values (a date, an entity) are not all strings
+            throw EntityNotFoundException::fromClassNameAndIdentifier(\{{ entityClasspath }}::class, []);
+        }
+
+        return $entity;
+    }
+{% endif %}
 
     public function hasMoreThanNItems(string $columnName, $value, int $n): bool
     {
